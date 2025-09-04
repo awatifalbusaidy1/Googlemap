@@ -15,7 +15,7 @@
         <div class="guide-item">
             <img src="images/sales.png" alt="Sale Icon"> Sale
         </div>
-        <div class="guide-item">
+        <!-- <div class="guide-item">
             <img src="images/leasing.png" alt="Lease Icon"> Leasing
         </div>
         <div class="guide-item">
@@ -23,7 +23,7 @@
         </div>
         <div class="guide-item">
             <img src="images/thirdparty.png" alt="Third Party Icon"> Leasing Third Party
-        </div>
+        </div> -->
         
     </div>
     <script>
@@ -59,7 +59,7 @@
             const icons = {
         "sale": {
             url: "images/sales.png",
-            scaledSize: new google.maps.Size(30, 30) // Adjust size here
+            scaledSize: new google.maps.Size(50, 50) // Adjust size here
         },
         "lease": {
             url: "images/leasing.png",
@@ -155,16 +155,24 @@ function searchPins() {
 
             // Zoom into the matched marker
             map.setCenter(marker.getPosition()); 
-            map.setZoom(15); 
+            map.setZoom(18); 
 
             found = true;
         } else {
             marker.setVisible(false);
+            //  map = new google.maps.Map(document.getElementById("map"), {
+            //     center: { lat: 25.276987, lng: 51.520008 }, 
+            //     zoom: 9, 
+            //     mapTypeId: "roadmap",
+            //     zoomControl: false, 
+            //     streetViewControl: false,})
+            
         }
     });
 
     if (!found) {
         alert("No matching pin found.");
+        
     }
 }
 
