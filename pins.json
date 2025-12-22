@@ -142,6 +142,38 @@
         "landmarks": "Prime location near Lusail Boulevard, Place Vendome, Crescent Park, and easy access to Lusail Expressway",
         "link": "https://capstoneproperty.lightning.force.com/lightning/r/Project__c/a0JNM000001c6ev2AA/view",
         "type": "sale"
-      }
+      },
 
+      {
+        "lat": 25.3743787,    
+        "lng": 51.5309433,
+        "title": "Gewan Island (Resale)",
+        "image": "images/gewanisland.jpg",
+        "price": "<strong>Starting Price:</strong><br><ul> <li><strong>1 BR:</strong> QAR 1,590,000</li>",
+        "landmarks": "Located in the exclusive extension of The Pearl Island, this 93 sqm residence offers modern comfort, premium finishes",
+        "link": "https://capstoneproperty.lightning.force.com/lightning/r/Project__c/a0JNM000002DmX72AK/view",
+        "type": "sale"
+      },
+      {
+        "lat": 25.426232,    
+        "lng": 51.526591,
+        "title": "Qetaifan Island",
+        "image": "images/qetaifanisland.jpg",
+        "price": "<strong>Starting Price:</strong><br><ul> <li><strong>Land Plot</strong> QAR 8,487,427</li>",
+        "landmarks": "Land situated in Qetaifan Island, Lusail most sought-after waterfront development",
+        "link": "https://capstoneproperty.lightning.force.com/lightning/r/Project__c/a0JNM0000026wEf2AI/view",
+        "type": "sale"
+      },
+       {
+        "lat": 25.452160,    
+        "lng": 51.484849,
+        "title": "Huzoom Land",
+        "image": "images/huzoom.jpg",
+        "price": "<strong>Starting Price:</strong><br><ul> <li><strong>Land Plot</strong> QAR 1,850,000</li>",
+        "landmarks": "Lusail City, Prime opportunity to secure a 400 SQM plot in the rapidly developing Huzoom area of Lusail City, perfect for families or investors looking to build a customized villa or a future-proof investment.",
+        "link": "https://capstoneproperty.lightning.force.com/lightning/r/Project__c/a0JNM0000026YM12AM/view",
+        "type": "sale"
+      }
+     
+ 
 ]}
