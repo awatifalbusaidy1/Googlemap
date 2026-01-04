@@ -180,7 +180,7 @@
     <div id="guide-box">
       <h3>Capstone property</h3>
       <div class="guide-item">
-        <img src="images/capstone-logo.png" alt="Leasing Icon" /> Sales
+        <img src="images/capstone-logo.png" alt="Sales Icon" /> Sales
       </div>
     </div>
   </div> 
@@ -204,31 +204,77 @@ let activeArea = "ALL";
   If you want PERFECT outlines, give me the exact areas you use and I’ll refine coordinates.
 */
 const AREAS = {
-  LUSAIL: [
-    { lat: 25.46, lng: 51.47 },
-    { lat: 25.46, lng: 51.62 },
-    { lat: 25.34, lng: 51.62 },
-    { lat: 25.34, lng: 51.47 }
-  ],
+  // Lusail (tighter box around Lusail city / marina / entertainment city)
+LUSAIL: [
+  // North-West (Golf District / Stadium north)
+  { lat: 25.4720, lng: 51.4750 },
+
+  // North (Qetaifan / Waterfront)
+  { lat: 25.4780, lng: 51.5250 },
+  { lat: 25.4740, lng: 51.5850 },
+
+  // North-East (Qetaifan edge)
+  { lat: 25.4680, lng: 51.6050 },
+
+  // // East (full Marina waterfront)
+  { lat: 25.4450, lng: 51.6100 },
+  { lat: 25.4200, lng: 51.6100 },
+
+  // // South-East (Marina District SOUTH – included)
+  { lat: 25.3800, lng: 51.6000 },
+
+  { lat: 25.387618, lng: 51.538570},
+ { lat:25.382362, lng:51.531221},
+ { lat: 25.374707, lng:51.509786},
+ { lat:25.379687, lng:51.499579},
+ { lat:25.412052, lng:51.468754},
+
+ { lat:25.419748, lng:51.472264},
+
+ { lat:25.427577, lng: 51.475697},
+
+ { lat:25.421425, lng:51.468796},
+
+ { lat:25.426577, lng:51.468553},
+
+ { lat:25.456172, lng:51.468067},
+       { lat:25.463625,lng: 51.474743},
+
+
+],
+
+  // West Bay (keep as-is or adjust later)
   WESTBAY: [
     { lat: 25.355, lng: 51.49 },
     { lat: 25.355, lng: 51.56 },
     { lat: 25.295, lng: 51.56 },
     { lat: 25.295, lng: 51.49 }
   ],
-  PEARL: [
-    { lat: 25.405, lng: 51.50 },
-    { lat: 25.405, lng: 51.59 },
-    { lat: 25.345, lng: 51.59 },
-    { lat: 25.345, lng: 51.50 }
-  ],
-  WAKRAH: [
-    { lat: 25.20, lng: 51.49 },
-    { lat: 25.20, lng: 51.64 },
-    { lat: 25.08, lng: 51.64 },
-    { lat: 25.08, lng: 51.49 }
-  ]
+
+ PEARL: [
+  { lat: 25.3870, lng: 51.5335 },
+
+  { lat: 25.3935, lng: 51.5485 },
+  { lat: 25.3940, lng: 51.5615 },
+
+  { lat: 25.3920, lng: 51.5725 },
+
+  { lat: 25.3870, lng: 51.5865 },
+  { lat: 25.3745, lng: 51.5905 },
+
+  { lat: 25.3615, lng: 51.5860 },
+
+  { lat: 25.3500, lng: 51.5720 },
+  { lat: 25.3465, lng: 51.5555 },
+
+  { lat: 25.3495, lng: 51.5395 },
+
+  { lat: 25.3605, lng: 51.5285 }
+],
+
+
 };
+
 
 function buildAreas() {
   // Create polygons (hidden by default)
