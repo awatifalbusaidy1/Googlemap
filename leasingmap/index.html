@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Maps Qatar</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* Search panel */
+    .search-wrap{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      width: min(420px, calc(100vw - 24px));
+      position: absolute;
+      top: 100px;            /* leave space for Map/Satellite control */
+      left: 12px;
+      z-index: 10;
+    }
+
+    #search-box, #property-dropdown{
+      width: 100%;
+      height: 52px;
+      padding: 0 18px;
+      border-radius: 14px;
+      font-size: 16px;
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      background: #fff;
+      outline: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+
+    #clear-btn{
+      height: 48px;
+      border-radius: 14px;
+      border: none;
+      background: #e9eef5;
+      color: #333;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+    }
+    #clear-btn:hover{ background:#dfe6ef; }
+
+    /* Suggestions dropdown */
+    #suggestions{
+      background:#fff;
+      border-radius:14px;
+      margin-top:6px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.18);
+      overflow:hidden;
+      max-height:260px;
+      overflow-y:auto;
+      display:none;
+    }
+    .suggestion-item{
+      padding:12px 18px;
+      font-size:15px;
+      cursor:pointer;
+      background:#fff;
+    }
+    .suggestion-item:hover,
+    .suggestion-item.active{
+      background:#f2f4f7;
+    }
+
+    /* Area buttons */
+    #area-bar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .area-btn{
+      border:none;
+      background:#fff;
+      border-radius:12px;
+      padding:10px 12px;
+      cursor:pointer;
+      box-shadow:0 2px 10px rgba(0,0,0,0.12);
+      font-weight:600;
+      font-size:14px;
+    }
+    .area-btn.active{ background:#e9eef5; }
+
+    /* Map container */
+    #map{
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* Right bottom controls stack */
+    #control-stack{
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    #zoom-box{
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 2px 10px rgba(0,0,0,.15);
+      overflow:hidden;
+      display:inline-flex;
+      flex-direction:column;
+    }
+    .zoom-btn{
+      width:44px;
+      height:44px;
+      border:0;
+      background:#fff;
+      cursor:pointer;
+      font-size:20px;
+      line-height:1;
+    }
+    .zoom-btn + .zoom-btn{ border-top:1px solid #eee; }
+
+    /* Pin guide */
+    #guide-box{
+      position: static !important;
+      right:auto !important;
+      bottom:auto !important;
+      margin:0 !important;
+      background:#fff;
+      border-radius:12px;
+      box-shadow:0 2px 10px rgba(0,0,0,0.15);
+      padding:10px 12px;
+      min-width: 160px;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+    }
+    #guide-box h3{ margin:0 0 6px 0; font-size:16px; text-align:center; }
+    .guide-item{ display:flex; align-items:center; gap:8px; }
+    .guide-item img{ width:20px; height:20px; }
+  </style>
+
+  <!-- IMPORTANT: geometry library is required for "pin inside area" check -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDPJsDKW08BaA8Am1CCoVGum6jOgcF893Q&callback=initMap&libraries=geometry"
+    async defer></script>
+</head>
+
+<body>
+  <div class="search-wrap">
+    <input id="search-box" type="text" placeholder="Search a project" autocomplete="off" />
+
+    <select id="property-dropdown">
+      <option value="">Select a property</option>
+    </select>
+
+    <button id="clear-btn" type="button">Clear / Reset</button>
+
+    <div id="area-bar">
+      <button class="area-btn active" data-area="ALL" type="button">All Areas</button>
+      <button class="area-btn" data-area="LUSAIL" type="button">Lusail</button>
+      <button class="area-btn" data-area="WESTBAY" type="button">West Bay</button>
+      <button class="area-btn" data-area="PEARL" type="button">The Pearl</button>
+      <button class="area-btn" data-area="BinOmran" type="button">Bin Omran</button>
+      <button class="area-btn" data-area="OldAirport" type="button">Old Airport</button>
+
+    </div>
+
+    <div id="suggestions"></div>
+  </div>
+
+  <div id="map"></div>
+
+  
+  <div id="control-stack">
+    <div id="zoom-box" aria-label="Map zoom controls">
+      <button class="zoom-btn" id="zoom-in" type="button" title="Zoom in">+</button>
+      <button class="zoom-btn" id="zoom-out" type="button" title="Zoom out">−</button>
+    </div>
+
+    <div id="guide-box">
+      <h3>Capstone property</h3>
+      <div class="guide-item">
+        <img src="images/capstone-logo.png" alt="Leasing Icon" /> Leasing
+      </div>
+    </div>
+  </div> 
+
+  
+
+
+<script>
+let map;
+let markers = [];   // { marker, infoWindow, pin, title }
+let allPins = [];
+let activeIndex = -1;
+let lastAutoOpenedTitle = "";
+
+// ----- Area Outlines -----
+let areaPolygons = {};     // name -> google.maps.Polygon
+let activeArea = "ALL";
+
+/*
+  NOTE: These are APPROXIMATE boundaries to start.
+  If you want PERFECT outlines, give me the exact areas you use and I’ll refine coordinates.
+*/
+const AREAS = {
+  // Lusail (tighter box around Lusail city / marina / entertainment city)
+LUSAIL: [
+  // North-West (Golf District / Stadium north)
+  { lat: 25.4720, lng: 51.4750 },
+
+  // North (Qetaifan / Waterfront)
+  { lat: 25.4780, lng: 51.5250 },
+  { lat: 25.4740, lng: 51.5850 },
+
+  // North-East (Qetaifan edge)
+  { lat: 25.4680, lng: 51.6050 },
+
+  // // East (full Marina waterfront)
+  { lat: 25.4450, lng: 51.6100 },
+  { lat: 25.4200, lng: 51.6100 },
+
+  // // South-East (Marina District SOUTH – included)
+  { lat: 25.3800, lng: 51.6000 },
+
+  { lat: 25.387618, lng: 51.538570},
+ { lat:25.382362, lng:51.531221},
+ { lat: 25.374707, lng:51.509786},
+ { lat:25.379687, lng:51.499579},
+ { lat:25.412052, lng:51.468754},
+
+ { lat:25.419748, lng:51.472264},
+
+ { lat:25.427577, lng: 51.475697},
+
+ { lat:25.421425, lng:51.468796},
+
+ { lat:25.426577, lng:51.468553},
+
+ { lat:25.456172, lng:51.468067},
+       { lat:25.463625,lng: 51.474743},
+
+
+],
+BinOmran:[
+{lat: 25.306871,lng: 51.487994},
+{lat: 25.308772,lng: 51.492028},
+{lat: 25.311061,lng: 51.496706},
+{lat: 25.307763,lng: 51.498594},
+{lat: 25.302758,lng: 51.500697},
+{lat: 25.299926,lng: 51.502543},
+{lat: 25.298297,lng: 51.500096},
+{lat: 25.300314,lng: 51.497050},
+{lat: 25.301992,lng: 51.493144},
+{lat: 25.302438,lng: 51.488810},
+{lat: 25.304902,lng: 51.488724},
+
+],
+OldAirport:[
+{lat: 25.239370,lng: 51.546383},
+{lat: 25.245038,lng: 51.542778},
+{lat: 25.252180,lng: 51.536426},
+{lat: 25.254305,lng: 51.537006},
+{lat: 25.254431,lng: 51.542124},
+{lat: 25.256216,lng: 51.548282},
+{lat: 25.263343,lng: 51.556393},
+{lat: 25.259772,lng: 51.560427},
+{lat: 25.255503,lng: 51.562916},
+{lat: 25.248361,lng: 51.566950},
+{lat: 25.245333,lng: 51.568774},
+{lat: 25.242763,lng: 51.563357},
+{lat: 25.241055,lng: 51.557220},
+
+],
+
+  // West Bay (keep as-is or adjust later)
+  WESTBAY: [
+    { lat: 25.355, lng: 51.49 },
+    { lat: 25.355, lng: 51.56 },
+    { lat: 25.295, lng: 51.56 },
+    { lat: 25.295, lng: 51.49 }
+  ],
+
+ PEARL: [
+  { lat: 25.3870, lng: 51.5335 },
+
+  { lat: 25.3935, lng: 51.5485 },
+  { lat: 25.3940, lng: 51.5615 },
+
+  { lat: 25.3920, lng: 51.5725 },
+
+  { lat: 25.3870, lng: 51.5865 },
+  { lat: 25.3745, lng: 51.5905 },
+
+  { lat: 25.3615, lng: 51.5860 },
+
+  { lat: 25.3500, lng: 51.5720 },
+  { lat: 25.3465, lng: 51.5555 },
+
+  { lat: 25.3495, lng: 51.5395 },
+
+  { lat: 25.3605, lng: 51.5285 }
+],
+
+
+};
+
+
+function buildAreas() {
+  // Create polygons (hidden by default)
+  Object.entries(AREAS).forEach(([name, path]) => {
+    const poly = new google.maps.Polygon({
+      paths: path,
+      strokeColor: "#1a73e8",
+      strokeOpacity: 0.9,
+      strokeWeight: 2,
+      fillColor: "#1a73e8",
+      fillOpacity: 0.12,
+      map: null
+    });
+    areaPolygons[name] = poly;
+  });
+
+  // Button clicks
+  document.querySelectorAll(".area-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".area-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      setActiveArea(btn.dataset.area);
+    });
+  });
+}
+
+function setActiveArea(areaName) {
+  activeArea = areaName;
+
+  // Hide all polygons
+  Object.values(areaPolygons).forEach(p => p.setMap(null));
+
+  // Show all markers if ALL
+  if (areaName === "ALL") {
+    markers.forEach(m => m.marker.setVisible(true));
+    closeAllPopups();
+    map.setCenter({ lat: 25.276987, lng: 51.520008 });
+    map.setZoom(9);
+    return;
+  }
+
+  const poly = areaPolygons[areaName];
+  if (!poly) return;
+
+  // Show polygon + fit bounds
+  poly.setMap(map);
+  const bounds = new google.maps.LatLngBounds();
+  poly.getPath().forEach(p => bounds.extend(p));
+  map.fitBounds(bounds);
+
+  // Filter pins inside polygon
+  markers.forEach(m => {
+    const inside = google.maps.geometry.poly.containsLocation(m.marker.getPosition(), poly);
+    m.marker.setVisible(inside);
+  });
+
+  closeAllPopups();
+}
+
+// ----- Helpers -----
+function closeAllPopups() {
+  markers.forEach((m) => m.infoWindow.close());
+}
+
+function normalizeText(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[m]));
+}
+
+function hideSuggestions() {
+  const box = document.getElementById("suggestions");
+  box.style.display = "none";
+  box.innerHTML = "";
+  activeIndex = -1;
+}
+
+function setActive(items) {
+  items.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
+  items[activeIndex].scrollIntoView({ block: "nearest" });
+}
+
+// ----- Dropdown -----
+function buildDropdown(pins) {
+  const dd = document.getElementById("property-dropdown");
+  if (!dd) return;
+
+  const titles = Array.from(
+    new Set((pins || []).map((p) => String(p.title || "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  dd.innerHTML =
+    '<option value="">Select a property</option>' +
+    titles.map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("");
+
+  dd.addEventListener("change", () => {
+    const title = dd.value;
+    if (!title) return;
+    const input = document.getElementById("search-box");
+    if (input) input.value = title;
+    selectProjectByTitle(title);
+  });
+}
+
+// ----- Map Init -----
+function initMap() {
+  map = new google.maps.Map(document.getElementById("map"), {
+    center: { lat: 25.276987, lng: 51.520008 },
+    zoom: 9,
+    mapTypeId: "roadmap",
+    zoomControl: false,
+    streetViewControl: false,
+  });
+
+  // Zoom buttons
+  document.getElementById("zoom-in").addEventListener("click", () => map.setZoom(map.getZoom() + 1));
+  document.getElementById("zoom-out").addEventListener("click", () => map.setZoom(map.getZoom() - 1));
+
+  // Build area polygons/buttons
+  buildAreas();
+
+  // Load pins
+  fetch("pins.json")
+    .then((r) => r.json())
+    .then((data) => {
+      allPins = data.pins || [];
+      buildDropdown(allPins);
+      allPins.forEach((pin) => addMarker(pin));
+      setActiveArea("ALL");
+    })
+    .catch((err) => console.error("Failed to load pins.json:", err));
+
+  // Search events
+  const input = document.getElementById("search-box");
+  input.addEventListener("input", onSearchInput);
+  input.addEventListener("keydown", onSearchKeyDown);
+
+  // Zoom and Zoom out of the map 
+  const defaultCenter = map.getCenter();
+  const defaultZoom = map.getZoom();
+
+
+  // Close suggestions when clicking outside
+  document.addEventListener("click", (e) => {
+    const wrap = document.querySelector(".search-wrap");
+    if (wrap && !wrap.contains(e.target)) hideSuggestions();
+  });
+
+  // Reset button (works because it's in main script, not google src tag)
+  document.getElementById("clear-btn").addEventListener("click", () => {
+    document.getElementById("search-box").value = "";
+    document.getElementById("property-dropdown").value = "";
+    hideSuggestions();
+    lastAutoOpenedTitle = "";
+
+    // set area back to ALL (and activate button UI)
+    document.querySelectorAll(".area-btn").forEach(b => b.classList.remove("active"));
+    const allBtn = document.querySelector('.area-btn[data-area="ALL"]');
+    if (allBtn) allBtn.classList.add("active");
+    setActiveArea("ALL");
+  });
+}
+
+// ----- Markers -----
+function addMarker(pin) {
+  const icons = {
+    sale: { url: "images/sales.png", scaledSize: new google.maps.Size(64, 64) },
+    lease: { url: "images/leasing.png", scaledSize: new google.maps.Size(44, 44) },
+    propertymanagement: { url: "images/propertymanagement.png", scaledSize: new google.maps.Size(44, 44) },
+    thirdparty: { url: "images/thirdparty.png", scaledSize: new google.maps.Size(44, 44) },
+    leasing: { url: "images/leasing.png", scaledSize: new google.maps.Size(44, 44) }
+  };
+
+  const typeKey = (pin.type || "").toLowerCase();
+
+  const marker = new google.maps.Marker({
+    position: { lat: pin.lat, lng: pin.lng },
+    map,
+    icon: icons[typeKey] || icons.lease,
+    title: pin.title || "",
+  });
+
+  const infoWindow = new google.maps.InfoWindow({
+    content: `
+      <div style="max-width: 320px; font-family: Arial, sans-serif;">
+        <img src="${pin.image || ""}" alt="${escapeHtml(pin.title || "")}"
+          style="width:100%; height:auto; border-radius: 8px; display:block;">
+
+        <h3 style="margin: 12px 0 8px; font-size: 18px;">
+          ${escapeHtml(pin.title || "")}
+        </h3>
+
+        <p style="margin: 6px 0; font-size: 14px;">
+          <b>Location:</b> ${escapeHtml(pin.description || pin.location || "")}
+        </p>
+
+        <div style="margin: 8px 0; font-size: 14px;">
+          ${pin.price || ""}
+        </div>
+
+        <p style="margin: 6px 0; font-size: 14px;">
+          <b>Famous Landmark:</b> ${escapeHtml(pin.landmarks || pin.landmark || "")}
+        </p>
+
+        ${
+          pin.link
+            ? `<a href="${pin.link}" target="_blank"
+                style="display:inline-block; margin-top:8px; color: #1a73e8; text-decoration: underline; font-size: 14px;">
+                Project in Salesforce
+              </a>`
+            : ""
+        }
+      </div>
+    `,
+  });
+
+  marker.addListener("click", () => openProjectPopup({ marker, infoWindow, pin }));
+
+  markers.push({
+    marker,
+    infoWindow,
+    pin,
+    title: normalizeText(pin.title),
+  });
+}
+
+function openProjectPopup(found) {
+  closeAllPopups();
+  found.marker.setVisible(true);
+  map.panTo(found.marker.getPosition());
+  map.setZoom(18);
+  found.infoWindow.open(map, found.marker);
+}
+
+// ----- Search + Suggestions -----
+function onSearchInput(e) {
+  const raw = e.target.value.trim();
+
+  if (!raw) {
+    markers.forEach((m) => m.marker.setVisible(activeArea === "ALL" ? true : m.marker.getVisible()));
+    closeAllPopups();
+    if (activeArea === "ALL") {
+      map.setCenter({ lat: 25.276987, lng: 51.520008 });
+      map.setZoom(9);
+    }
+    hideSuggestions();
+    lastAutoOpenedTitle = "";
+    return;
+  }
+
+  const q = normalizeText(raw);
+  const qCompact = q.replace(/[\s-]/g, "");
+
+  const matches = allPins
+    .filter((p) => {
+      const t = normalizeText(p.title);
+      const tCompact = t.replace(/[\s-]/g, "");
+      return t.includes(q) || tCompact.includes(qCompact);
+    })
+    .slice(0, 8);
+
+  // Respect area filter (if not ALL)
+  markers.forEach((m) => {
+    const t = m.title;
+    const tCompact = t.replace(/[\s-]/g, "");
+    const match = t.includes(q) || tCompact.includes(qCompact);
+
+    if (activeArea === "ALL") {
+      m.marker.setVisible(match);
+    } else {
+      const poly = areaPolygons[activeArea];
+      const inside = poly
+        ? google.maps.geometry.poly.containsLocation(m.marker.getPosition(), poly)
+        : true;
+      m.marker.setVisible(match && inside);
+    }
+  });
+
+  renderSuggestions(matches);
+
+  if (!matches.length) return;
+
+  const exact = matches.find((p) => normalizeText(p.title) === q);
+  const candidate = exact || (matches.length === 1 ? matches[0] : null);
+
+  if (candidate) {
+    const candidateTitle = normalizeText(candidate.title);
+    if (lastAutoOpenedTitle !== candidateTitle) {
+      lastAutoOpenedTitle = candidateTitle;
+      selectProjectByTitle(candidate.title);
+    }
+  }
+}
+
+function renderSuggestions(items) {
+  const box = document.getElementById("suggestions");
+  activeIndex = -1;
+
+  if (!items.length) {
+    box.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  box.innerHTML = items
+    .map((p, idx) => `
+      <div class="suggestion-item" data-index="${idx}">
+        ${escapeHtml(p.title || "")}
+      </div>
+    `)
+    .join("");
+
+  box.style.display = "block";
+
+  box.querySelectorAll(".suggestion-item").forEach((el) => {
+    el.addEventListener("click", () => {
+      const title = el.textContent.trim();
+      selectProjectByTitle(title);
+    });
+  });
+}
+
+function onSearchKeyDown(e) {
+  const box = document.getElementById("suggestions");
+  if (box.style.display !== "block") return;
+
+  const items = Array.from(box.querySelectorAll(".suggestion-item"));
+  if (!items.length) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    activeIndex = (activeIndex + 1) % items.length;
+    setActive(items);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    activeIndex = (activeIndex - 1 + items.length) % items.length;
+    setActive(items);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (activeIndex >= 0) items[activeIndex].click();
+    else selectProjectByTitle(document.getElementById("search-box").value);
+  } else if (e.key === "Escape") {
+    hideSuggestions();
+  }
+}
+
+function selectProjectByTitle(title) {
+  const q = normalizeText(title);
+  const qCompact = q.replace(/[\s-]/g, "");
+
+  const found =
+    markers.find((m) => m.title === q) ||
+    markers.find((m) => m.title.includes(q)) ||
+    markers.find((m) => m.title.replace(/[\s-]/g, "").includes(qCompact));
+
+  if (!found) return;
+
+  // If an area is selected and this pin is outside it, switch to ALL so agent can still open it
+  if (activeArea !== "ALL") {
+    const poly = areaPolygons[activeArea];
+    const inside = poly ? google.maps.geometry.poly.containsLocation(found.marker.getPosition(), poly) : true;
+    if (!inside) {
+      document.querySelectorAll(".area-btn").forEach(b => b.classList.remove("active"));
+      const allBtn = document.querySelector('.area-btn[data-area="ALL"]');
+      if (allBtn) allBtn.classList.add("active");
+      setActiveArea("ALL");
+    }
+  }
+
+  document.getElementById("search-box").value = found.pin.title || "";
+  const dd = document.getElementById("property-dropdown");
+  if (dd) dd.value = found.pin.title || "";
+
+  hideSuggestions();
+  openProjectPopup(found);
+}
+</script>
+</body>
+</html>
